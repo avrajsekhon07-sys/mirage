@@ -1,51 +1,62 @@
-"""Authentication routes: register, login, me."""
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.database import get_db
-from app.schemas.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.services.user_service import UserService
-from app.core.security import create_access_token, get_current_user
+from app.core.security import create_access_token
 
 router = APIRouter()
 
-
-@router.post("/register", response_model=TokenResponse, status_code=201)
-async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """Register a new user account."""
-    # Check uniqueness
-    if await UserService.get_user_by_email(db, data.email):
+@router.post("/register")
+async def register(data: dict, db: AsyncSession = Depends(get_db)):
+    email = data.get("email")
+    username = data.get("username")
+    password = data.get("password")
+    full_name = data.get("full_name")
+    if not email or not username or not password:
+        raise HTTPException(status_code=400, detail="Missing fields")
+    if await UserService.get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    if await UserService.get_user_by_username(db, data.username):
+    if await UserService.get_user_by_username(db, username):
         raise HTTPException(status_code=400, detail="Username already taken")
-
-    user = await UserService.create_user(
-        db, data.email, data.username, data.password, data.full_name
-    )
+    user = await UserService.create_user(db, email, username, password, full_name)
     await db.commit()
-
     token = create_access_token({"sub": str(user.id)})
-    return TokenResponse(access_token=token, user=UserOut.model_validate(user))
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_admin": user.is_admin,
+            "created_at": str(user.created_at)
+        }
+    }
 
-
-@router.post("/login", response_model=TokenResponse)
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
-    """Authenticate and return JWT token."""
-    user = await UserService.authenticate(db, data.email, data.password)
+@router.post("/login")
+async def login(data: dict, db: AsyncSession = Depends(get_db)):
+    email = data.get("email")
+    password = data.get("password")
+    user = await UserService.authenticate(db, email, password)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Account is deactivated")
-
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_access_token({"sub": str(user.id)})
-    return TokenResponse(access_token=token, user=UserOut.model_validate(user))
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_admin": user.is_admin,
+            "created_at": str(user.created_at)
+        }
+    }
 
-
-@router.get("/me", response_model=UserOut)
-async def get_me(current_user=Depends(get_current_user)):
-    """Get current authenticated user profile."""
-    return current_user
+@router.get("/me")
+async def me():
+    return {"status": "ok"}
