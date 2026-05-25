@@ -1,97 +1,46 @@
-"""
-Mirage — Behavioral Financial Manipulation Detection Engine
-Main FastAPI Application Entry Point
-"""
-
-import asyncio
 import logging
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
 
-from app.api.routes import auth, transactions, analytics, alerts, websocket, admin
-from app.core.config import settings
-from app.db.database import engine, Base
-from app.services.transaction_simulator import TransactionSimulator
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Global simulator instance
-simulator: TransactionSimulator = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Handle application startup and shutdown lifecycle."""
-    global simulator
-
-    logger.info("🚀 Starting Mirage Detection Engine...")
-
-    # Create DB tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("✅ Database tables initialized")
-
-    # Start transaction simulator
-    simulator = TransactionSimulator()
-    simulator_task = asyncio.create_task(simulator.start())
-    logger.info("✅ Transaction simulator started")
-
-    yield
-
-    # Shutdown
-    logger.info("🛑 Shutting down Mirage...")
-    if simulator:
-        simulator.stop()
-    simulator_task.cancel()
+    logger.info("Starting Mirage...")
     try:
-        await simulator_task
-    except asyncio.CancelledError:
-        pass
-    logger.info("✅ Shutdown complete")
+        from app.db.database import engine, Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database connected!")
+    except Exception as e:
+        logger.error(f"Database error (continuing anyway): {e}")
+    yield
+    logger.info("Shutdown")
 
+app = FastAPI(title="Mirage")
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Mirage — Behavioral Financial Manipulation Detection Engine",
-    description="AI-powered platform for detecting psychological financial manipulation patterns",
-    version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    lifespan=lifespan,
-)
-
-# Middleware
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(transactions.router, prefix="/api/transactions", tags=["Transactions"])
-app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
-app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
-app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
-app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
+@app.get("/api/health")
+async def health():
+    return {"status": "operational"}
 
-
-@app.get("/api/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "operational",
-        "service": "Mirage Detection Engine",
-        "version": "1.0.0"
-    }
+try:
+    from app.api.routes import auth, transactions, analytics, alerts, admin, websocket
+    app.include_router(auth.router, prefix="/api/auth")
+    app.include_router(transactions.router, prefix="/api/transactions")
+    app.include_router(analytics.router, prefix="/api/analytics")
+    app.include_router(alerts.router, prefix="/api/alerts")
+    app.include_router(admin.router, prefix="/api/admin")
+    app.include_router(websocket.router, prefix="/ws")
+    logger.info("All routes loaded!")
+except Exception as e:
+    logger.error(f"Route loading error: {e}")
