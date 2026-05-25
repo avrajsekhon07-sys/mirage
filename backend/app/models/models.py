@@ -79,7 +79,7 @@ class Transaction(Base):
     flag_reason = Column(Text)
     hour_of_day = Column(Integer)  # 0-23
     day_of_week = Column(Integer)  # 0=Monday, 6=Sunday
-    metadata = Column(JSON, default={})
+    extra_data = Column(JSON, default={})
 
     # Relationships
     user = relationship("User", back_populates="transactions")
