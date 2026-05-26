@@ -1,7 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -13,12 +16,12 @@ async def lifespan(app: FastAPI):
         from app.db.database import engine, Base
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database connected!")
+        logger.info("Database tables created!")
     except Exception as e:
         logger.error(f"DB error: {e}")
     yield
 
-app = FastAPI(title="Mirage")
+app = FastAPI(title="Mirage", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,14 +35,67 @@ app.add_middleware(
 async def health():
     return {"status": "operational"}
 
-try:
-    from app.api.routes import auth, transactions, analytics, alerts, admin, websocket
-    app.include_router(auth.router, prefix="/api/auth")
-    app.include_router(transactions.router, prefix="/api/transactions")
-    app.include_router(analytics.router, prefix="/api/analytics")
-    app.include_router(alerts.router, prefix="/api/alerts")
-    app.include_router(admin.router, prefix="/api/admin")
-    app.include_router(websocket.router, prefix="/ws")
-    logger.info("All routes loaded!")
-except Exception as e:
-    logger.error(f"Route error: {e}")
+class RegData(BaseModel):
+    email: str
+    username: str
+    password: str
+    full_name: Optional[str] = None
+
+class LogData(BaseModel):
+    email: str
+    password: str
+
+def get_db():
+    from app.db.database import AsyncSessionLocal
+    return AsyncSessionLocal()
+
+@app.post("/api/auth/register")
+async def register(data: RegData):
+    from app.db.database import AsyncSessionLocal
+    from app.services.user_service import UserService
+    from app.core.security import create_access_token
+    async with AsyncSessionLocal() as db:
+        if await UserService.get_user_by_email(db, data.email):
+            raise HTTPException(400, "Email already registered")
+        if await UserService.get_user_by_username(db, data.username):
+            raise HTTPException(400, "Username already taken")
+        user = await UserService.create_user(db, data.email, data.username, data.password, data.full_name)
+        await db.commit()
+        token = create_access_token({"sub": str(user.id)})
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "is_admin": user.is_admin,
+                "created_at": str(user.created_at)
+            }
+        }
+
+@app.post("/api/auth/login")
+async def login(data: LogData):
+    from app.db.database import AsyncSessionLocal
+    from app.services.user_service import UserService
+    from app.core.security import create_access_token
+    async with AsyncSessionLocal() as db:
+        user = await UserService.authenticate(db, data.email, data.password)
+        if not user:
+            raise HTTPException(401, "Invalid credentials")
+        token = create_access_token({"sub": str(user.id)})
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "is_admin": user.is_admin,
+                "created_at": str(user.created_at)
+            }
+        }
