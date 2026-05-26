@@ -15,16 +15,15 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database connected!")
     except Exception as e:
-        logger.error(f"Database error (continuing anyway): {e}")
+        logger.error(f"DB error: {e}")
     yield
-    logger.info("Shutdown")
 
 app = FastAPI(title="Mirage")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,4 +42,4 @@ try:
     app.include_router(websocket.router, prefix="/ws")
     logger.info("All routes loaded!")
 except Exception as e:
-    logger.error(f"Route loading error: {e}")
+    logger.error(f"Route error: {e}")
