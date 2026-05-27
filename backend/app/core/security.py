@@ -23,7 +23,7 @@ bearer_scheme = HTTPBearer()
 
 def hash_password(password: str) -> str:
     """Hash a plain-text password."""
-    return pwd_context.hash(password)
+    return pwd_context.hash(password[:72])
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
