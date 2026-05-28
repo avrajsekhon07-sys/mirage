@@ -143,7 +143,7 @@ class RiskService:
 
         risk_dict = {
             "overall_score": latest.overall_score,
-            "risk_level": latest.risk_level.value,
+            "risk_level": str(latest.risk_level.value if hasattr(latest.risk_level, 'value') else latest.risk_level),
             "manipulation_probability": latest.manipulation_probability,
             "anomaly_score": latest.anomaly_score,
             "impulsiveness_score": latest.impulsiveness_score,
