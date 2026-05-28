@@ -1,13 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,12 +16,13 @@ async def lifespan(app: FastAPI):
         from app.db.database import engine, Base
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created!")
+        logger.info("Database tables ready")
     except Exception as e:
-        logger.error(f"DB error: {e}")
+        logger.error(f"DB init error: {e}")
     yield
 
-app = FastAPI(title="Mirage", lifespan=lifespan)
+
+app = FastAPI(title="Mirage Risk Engine", version="2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,9 +32,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ── Health ─────────────────────────────────────────────────────────────────────
+
 @app.get("/api/health")
 async def health():
-    return {"status": "operational"}
+    return {"status": "operational", "version": "2.0"}
+
+
+# ── Inline Auth (fast path, no router overhead) ───────────────────────────────
 
 class RegData(BaseModel):
     email: str
@@ -41,13 +48,11 @@ class RegData(BaseModel):
     password: str
     full_name: Optional[str] = None
 
+
 class LogData(BaseModel):
     email: str
     password: str
 
-def get_db():
-    from app.db.database import AsyncSessionLocal
-    return AsyncSessionLocal()
 
 @app.post("/api/auth/register")
 async def register(data: RegData):
@@ -72,9 +77,10 @@ async def register(data: RegData):
                 "full_name": user.full_name,
                 "is_active": user.is_active,
                 "is_admin": user.is_admin,
-                "created_at": str(user.created_at)
-            }
+                "created_at": str(user.created_at),
+            },
         }
+
 
 @app.post("/api/auth/login")
 async def login(data: LogData):
@@ -96,6 +102,17 @@ async def login(data: LogData):
                 "full_name": user.full_name,
                 "is_active": user.is_active,
                 "is_admin": user.is_admin,
-                "created_at": str(user.created_at)
-            }
+                "created_at": str(user.created_at),
+            },
         }
+
+
+# ── Feature Routers ────────────────────────────────────────────────────────────
+
+from app.api.routes import transactions, analytics, alerts, admin, websocket as ws_routes
+
+app.include_router(transactions.router, prefix="/api/transactions", tags=["transactions"])
+app.include_router(analytics.router,    prefix="/api/analytics",    tags=["analytics"])
+app.include_router(alerts.router,       prefix="/api/alerts",       tags=["alerts"])
+app.include_router(admin.router,        prefix="/api/admin",        tags=["admin"])
+app.include_router(ws_routes.router,    prefix="/ws",               tags=["websocket"])

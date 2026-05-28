@@ -40,6 +40,9 @@ export const transactionsApi = {
   recent: (limit = 10) => api.get('/api/transactions/recent', { params: { limit } }),
   flagged: () => api.get('/api/transactions/flagged'),
   create: (data: any) => api.post('/api/transactions/', data),
+  simulate: (data: { amount: number; merchant: string; category: string; description?: string }) =>
+    api.post('/api/transactions/simulate', data),
+  attackSim: () => api.post('/api/transactions/attack-sim'),
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────

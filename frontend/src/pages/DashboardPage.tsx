@@ -8,6 +8,7 @@ import RiskTrendChart from '../components/charts/RiskTrendChart'
 import RecentTransactions from '../components/dashboard/RecentTransactions'
 import AlertsFeed from '../components/dashboard/AlertsFeed'
 import StatCard from '../components/dashboard/StatCard'
+import TransactionSimulator from '../components/dashboard/TransactionSimulator'
 
 export default function DashboardPage() {
   const dispatch = useDispatch<AppDispatch>()
@@ -112,6 +113,13 @@ export default function DashboardPage() {
         <RecentTransactions transactions={data?.recent_transactions || []} />
         <AlertsFeed alerts={data?.recent_alerts || []} />
       </div>
+
+      {/* Transaction simulator */}
+      <TransactionSimulator onComplete={() => {
+        dispatch(fetchDashboard())
+        dispatch(fetchRiskTrend(7))
+        dispatch(fetchAlerts())
+      }} />
     </div>
   )
 }
