@@ -96,15 +96,17 @@ async def refresh_risk_score(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Force-recompute risk score from latest behavioral data."""
+    """Force-recompute behavioral profile and risk score from transaction history."""
+    from app.services.risk_service import recompute_behavioral_profile
+    await recompute_behavioral_profile(db, current_user.id)
     score = await RiskService.compute_and_save_risk_score(db, current_user.id)
     await db.commit()
 
-    # Emit WebSocket update
     from app.services.websocket_manager import manager
     if score:
+        rl = str(score.risk_level.value if hasattr(score.risk_level, 'value') else score.risk_level)
         await manager.emit_risk_update(
-            {"overall_score": score.overall_score, "risk_level": score.risk_level.value},
+            {"overall_score": score.overall_score, "risk_level": rl},
             current_user.id,
         )
     return score

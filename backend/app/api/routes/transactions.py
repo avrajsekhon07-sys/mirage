@@ -191,6 +191,7 @@ async def simulate_transaction(
             current_user.id,
         )
 
+    risk_level_str = str(new_score.risk_level.value if hasattr(new_score.risk_level, 'value') else new_score.risk_level) if new_score else "unknown"
     return {
         "transaction": TransactionOut.model_validate(tx),
         "risk_score": RiskScoreOut.model_validate(new_score) if new_score else None,
@@ -199,7 +200,7 @@ async def simulate_transaction(
         "risk_delta": round(new_pct - prev_pct, 1),
         "flagged": is_flagged,
         "flag_reason": flag_reason,
-        "risk_level": new_score.risk_level.value if new_score else "unknown",
+        "risk_level": risk_level_str,
     }
 
 
@@ -296,6 +297,6 @@ async def attack_simulation(
         "prev_risk": prev_pct,
         "new_risk": new_pct,
         "risk_delta": round(new_pct - prev_pct, 1),
-        "risk_level": new_score.risk_level.value if new_score else "critical",
+        "risk_level": str(new_score.risk_level.value if hasattr(new_score.risk_level, 'value') else new_score.risk_level) if new_score else "critical",
         "tx_count": len(results),
     }
