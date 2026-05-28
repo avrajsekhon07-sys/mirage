@@ -3,9 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import { format, parseISO } from 'date-fns'
 import { analyticsApi } from '../../services/api'
 
-function fmt(ts: string) {
-  try { return format(parseISO(ts), 'MMM d') } catch { return ts }
-}
+function fmt(ts: string) { try { return format(parseISO(ts), 'MMM d') } catch { return ts } }
 
 const Tip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
@@ -29,9 +27,7 @@ export default function MultiRiskChart() {
   useEffect(() => {
     analyticsApi.getRiskTrend(14).then(r => {
       const td = r.data
-      const risk = td.risk_trend || []
-      const anomaly = td.anomaly_trend || []
-      const impulsive = td.impulsiveness_trend || []
+      const risk = td.risk_trend || [], anomaly = td.anomaly_trend || [], impulsive = td.impulsiveness_trend || []
       setData(risk.map((r: any, i: number) => ({
         t: fmt(r.timestamp),
         risk: r.value,
@@ -43,12 +39,11 @@ export default function MultiRiskChart() {
   }, [])
 
   return (
-    <div className="panel panel-hover p-4">
+    <div className="panel panel-hover p-5">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-mirage-muted">Multi-Dimensional Risk</span>
+        <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-mirage-muted">Multi-Dimensional Risk</span>
         <span className="text-[10px] font-mono text-mirage-muted">14D WINDOW</span>
       </div>
-
       {loading || data.length === 0 ? (
         <div className="flex items-center justify-center h-48">
           <p className="text-[11px] font-mono text-mirage-muted">Accumulating data...</p>
@@ -57,26 +52,13 @@ export default function MultiRiskChart() {
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
-              <XAxis
-                dataKey="t"
-                tick={{ fill: '#5A5A6E', fontSize: 9, fontFamily: 'JetBrains Mono' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{ fill: '#5A5A6E', fontSize: 9, fontFamily: 'JetBrains Mono' }}
-                axisLine={false}
-                tickLine={false}
-                tickCount={5}
-              />
-              <Tooltip content={<Tip />} cursor={{ stroke: '#282838', strokeWidth: 1 }} />
-              <Legend
-                formatter={(v) => <span className="text-[10px] font-mono text-mirage-muted">{v}</span>}
-              />
-              <Line type="monotone" dataKey="risk" name="Overall Risk" stroke="#C9A84C" strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="anomaly" name="Anomaly" stroke="#DC2626" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
-              <Line type="monotone" dataKey="impulsive" name="Impulsiveness" stroke="#D97706" strokeWidth={1.5} dot={false} strokeDasharray="3 3" />
+              <XAxis dataKey="t" tick={{ fill: '#444', fontSize: 9, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0,100]} tick={{ fill: '#444', fontSize: 9, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} tickCount={5} />
+              <Tooltip content={<Tip />} cursor={{ stroke: '#252525', strokeWidth: 1 }} />
+              <Legend formatter={(v) => <span className="text-[10px] font-mono text-mirage-muted">{v}</span>} />
+              <Line type="monotone" dataKey="risk"      name="Overall Risk"  stroke="#00FF94" strokeWidth={1.5} dot={false} />
+              <Line type="monotone" dataKey="anomaly"   name="Anomaly"       stroke="#FF3333" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+              <Line type="monotone" dataKey="impulsive" name="Impulsiveness"  stroke="#FFB800" strokeWidth={1.5} dot={false} strokeDasharray="3 3" />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -2,61 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
-
-* {
-  box-sizing: border-box;
-}
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
 
 body {
-  background-color: #080810;
+  background: #050505;
   color: #FFFFFF;
   font-family: 'DM Sans', system-ui, sans-serif;
-  overflow-x: hidden;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #080810; }
-::-webkit-scrollbar-thumb { background: #1A1A2C; }
-::-webkit-scrollbar-thumb:hover { background: #282838; }
+::-webkit-scrollbar-track { background: #050505; }
+::-webkit-scrollbar-thumb { background: #1A1A1A; }
+::-webkit-scrollbar-thumb:hover { background: #252525; }
 
-::selection { background: rgba(201, 168, 76, 0.15); color: #FFFFFF; }
+::selection { background: rgba(0,255,148,0.18); color: #FFF; }
 
+/* Base panel — no border-radius ever */
 .panel {
-  background: #0D0D1B;
-  border: 1px solid #1A1A2C;
-  transition: border-color 0.15s;
+  background: #0D0D0D;
+  border: 1px solid #1A1A1A;
+  transition: border-color 0.12s;
 }
+.panel-hover:hover { border-color: #252525; }
 
-.panel-hover:hover {
-  border-color: #282838;
-}
+/* Risk level */
+.risk-critical { color: #FF3333; }
+.risk-high     { color: #FF6600; }
+.risk-medium   { color: #FFB800; }
+.risk-low      { color: #00FF94; }
 
-.risk-critical { color: #DC2626; }
-.risk-high     { color: #EA580C; }
-.risk-medium   { color: #D97706; }
-.risk-low      { color: #16A34A; }
+.risk-bg-critical { background: rgba(255,51,51,0.05);  border-color: rgba(255,51,51,0.25);  }
+.risk-bg-high     { background: rgba(255,102,0,0.05);  border-color: rgba(255,102,0,0.25);  }
+.risk-bg-medium   { background: rgba(255,184,0,0.05);  border-color: rgba(255,184,0,0.25);  }
+.risk-bg-low      { background: rgba(0,255,148,0.05);  border-color: rgba(0,255,148,0.25);  }
 
-.risk-bg-critical { background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.2); }
-.risk-bg-high     { background: rgba(234,88,12,0.05);  border-color: rgba(234,88,12,0.2);  }
-.risk-bg-medium   { background: rgba(217,119,6,0.05);  border-color: rgba(217,119,6,0.2);  }
-.risk-bg-low      { background: rgba(22,163,74,0.05);  border-color: rgba(22,163,74,0.2);  }
-
+/* Spinner — neon green */
 .spinner {
-  border: 1.5px solid #1A1A2C;
-  border-top: 1.5px solid #C9A84C;
+  border: 1.5px solid #1A1A1A;
+  border-top-color: #00FF94;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   animation: spin 0.7s linear infinite;
   display: inline-block;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Input base */
+input, select, textarea {
+  background: #050505;
+  color: #FFF;
+  border: 1px solid #1A1A1A;
+  outline: none;
+  transition: border-color 0.12s;
+  font-family: 'JetBrains Mono', monospace;
 }
+input:focus, select:focus, textarea:focus { border-color: #00FF94; }
+input::placeholder { color: #333; }
