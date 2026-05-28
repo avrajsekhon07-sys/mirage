@@ -1,10 +1,17 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from passlib.context import CryptContext
+import bcrypt
 from app.models.models import User, BehavioralProfile
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password[:72].encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password[:72].encode(), hashed.encode())
+
 
 class UserService:
 
@@ -25,7 +32,7 @@ class UserService:
 
     @staticmethod
     async def create_user(db, email, username, password, full_name=None):
-        hashed = pwd_context.hash(password[:72])
+        hashed = _hash_password(password)
         user = User(email=email, username=username, hashed_password=hashed, full_name=full_name)
         db.add(user)
         await db.flush()
@@ -39,6 +46,6 @@ class UserService:
         user = await UserService.get_user_by_email(db, email)
         if not user:
             return None
-        if not pwd_context.verify(password[:72], user.hashed_password):
+        if not _verify_password(password, user.hashed_password):
             return None
         return user
