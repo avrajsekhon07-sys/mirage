@@ -287,8 +287,9 @@ async def attack_simulation(
             "gambling_risk": new_score.gambling_risk,
         }
         await sim._maybe_create_alerts(db, current_user.id, scores_dict, profile_dict)
+        rl_str = str(new_score.risk_level.value if hasattr(new_score.risk_level, 'value') else new_score.risk_level)
         await manager.emit_risk_update(
-            {"overall_score": new_score.overall_score, "risk_level": new_score.risk_level.value},
+            {"overall_score": new_score.overall_score, "risk_level": rl_str},
             current_user.id,
         )
 
