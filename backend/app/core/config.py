@@ -5,10 +5,12 @@ import os
 class Settings(BaseSettings):
     APP_NAME: str = "Mirage"
     DEBUG: bool = False
-    SECRET_KEY: str = "mirage-super-secret-key-abc123xyz456"
+    # REQUIRED in production — set via environment variable, never hardcode.
+    # Generate: python -c "import secrets; print(secrets.token_hex(32))"
+    SECRET_KEY: str = "SET_SECRET_KEY_ENV_VAR"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/mirage")
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/mirage"
     ALLOWED_ORIGINS: List[str] = ["*"]
     WS_HEARTBEAT_INTERVAL: int = 30
     SIMULATOR_INTERVAL_SECONDS: float = 5.0

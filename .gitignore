@@ -1,7 +1,11 @@
-# Environment
+# Secrets & environment — never commit real values
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+*.secret
+secrets/
 
 # Python
 __pycache__/
@@ -17,16 +21,27 @@ dist/
 build/
 *.pyc
 
-# Node
+# Node / Frontend
 node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/.env
+frontend/.env.*
 *.log
 npm-debug.log*
 
-# ML Models (auto-generated — don't commit large binaries)
-backend/models/*.pkl
-backend/models/*.joblib
+# Vercel
+.vercel
+frontend/.vercel
+
+# ML Models (large auto-generated binaries)
+backend/models/
+*.pkl
+*.joblib
+
+# Seed scripts (contain demo credentials)
+seed_transactions.py
+seed_*.py
 
 # Database
 *.db

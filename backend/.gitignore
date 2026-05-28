@@ -1,0 +1,15 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+models/
+*.pkl
+*.joblib
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
