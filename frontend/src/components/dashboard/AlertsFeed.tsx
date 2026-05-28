@@ -1,82 +1,76 @@
-import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { AlertTriangle, Shield, Zap, TrendingUp, Moon, Activity, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 
-const ALERT_ICONS: Record<string, any> = {
-  impulsive_spending: Zap,
-  scam_susceptibility: Shield,
-  emotional_trading: TrendingUp,
-  gambling_pattern: Activity,
-  transaction_burst: Zap,
-  late_night_activity: Moon,
-  anomalous_behavior: AlertTriangle,
-  behavioral_deviation: AlertTriangle,
+const SEV_BORDER: Record<string, string> = {
+  low: 'border-l-mirage-success',
+  medium: 'border-l-mirage-warning',
+  high: 'border-l-orange-500',
+  critical: 'border-l-mirage-danger',
 }
 
-const SEVERITY_STYLE: Record<string, string> = {
-  low: 'border-mirage-success/20 bg-mirage-success/5 text-mirage-success',
-  medium: 'border-mirage-warning/20 bg-mirage-warning/5 text-mirage-warning',
-  high: 'border-orange-500/20 bg-orange-500/5 text-orange-500',
-  critical: 'border-mirage-danger/20 bg-mirage-danger/5 text-mirage-danger',
+const SEV_TEXT: Record<string, string> = {
+  low: 'text-mirage-success',
+  medium: 'text-mirage-warning',
+  high: 'text-orange-500',
+  critical: 'text-mirage-danger',
 }
 
-interface Props {
-  alerts: any[]
+const SEV_BORDER_LABEL: Record<string, string> = {
+  low: 'border-mirage-success/30',
+  medium: 'border-mirage-warning/30',
+  high: 'border-orange-500/30',
+  critical: 'border-mirage-danger/30',
 }
 
-export default function AlertsFeed({ alerts }: Props) {
+function fmtDate(ts: string) {
+  try { return format(parseISO(ts), 'MMM d, HH:mm') } catch { return '' }
+}
+
+export default function AlertsFeed({ alerts }: { alerts: any[] }) {
   return (
-    <div className="card p-6 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display text-sm text-mirage-text tracking-wider">RECENT ALERTS</h3>
-        <Link to="/alerts" className="text-xs text-mirage-accent hover:text-mirage-accent/80 flex items-center gap-1 font-mono">
-          VIEW ALL <ArrowUpRight className="w-3 h-3" />
+    <div className="panel flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-mirage-border">
+        <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-mirage-muted">Recent Alerts</span>
+        <Link to="/alerts" className="text-[10px] font-mono text-mirage-accent hover:text-mirage-accent-dim transition-colors">
+          ALL ALERTS →
         </Link>
       </div>
 
       {alerts.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center py-8">
-          <div className="text-center">
-            <Shield className="w-8 h-8 text-mirage-success mx-auto mb-2 opacity-50" />
-            <p className="text-mirage-muted text-sm font-mono">No alerts detected</p>
-          </div>
+        <div className="flex items-center justify-center py-12">
+          <p className="text-[11px] font-mono text-mirage-muted">No alerts detected</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          <AnimatePresence initial={false}>
-            {alerts.slice(0, 6).map((alert, i) => {
-              const Icon = ALERT_ICONS[alert.alert_type] || AlertTriangle
-              const style = SEVERITY_STYLE[alert.severity] || SEVERITY_STYLE.medium
-              return (
-                <motion.div
-                  key={alert.id || i}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={clsx('p-3 rounded-lg border', style, !alert.is_read && 'ring-1 ring-current ring-opacity-20')}
-                >
-                  <div className="flex items-start gap-3">
-                    <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs font-display font-bold uppercase tracking-wider truncate">{alert.title}</p>
-                        {!alert.is_read && (
-                          <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current" />
-                        )}
-                      </div>
-                      <p className="text-xs opacity-80 leading-relaxed line-clamp-2">{alert.message}</p>
-                      <p className="text-[10px] opacity-60 font-mono mt-1">
-                        {alert.created_at ? (() => { try { return format(parseISO(alert.created_at), 'MMM d, HH:mm') } catch { return '' } })() : ''}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
+        <div className="divide-y divide-mirage-border">
+          {alerts.slice(0, 6).map((alert, i) => (
+            <div
+              key={alert.id || i}
+              className={clsx(
+                'flex items-start gap-3 px-4 py-3 border-l-2 hover:bg-white/[0.02] transition-colors',
+                SEV_BORDER[alert.severity] || 'border-l-mirage-muted'
+              )}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className={clsx('text-[11px] font-mono font-semibold uppercase tracking-wide truncate', SEV_TEXT[alert.severity] || 'text-white')}>
+                    {alert.title}
+                  </p>
+                  {!alert.is_read && <span className="w-1.5 h-1.5 rounded-full bg-mirage-accent flex-shrink-0" />}
+                </div>
+                <p className="text-[11px] text-mirage-text-dim leading-snug line-clamp-2">{alert.message}</p>
+                <p className="text-[10px] font-mono text-mirage-muted mt-1">{alert.created_at ? fmtDate(alert.created_at) : ''}</p>
+              </div>
+
+              <span className={clsx(
+                'text-[9px] font-mono uppercase border px-1.5 py-px flex-shrink-0 mt-0.5',
+                SEV_TEXT[alert.severity] || 'text-mirage-muted',
+                SEV_BORDER_LABEL[alert.severity] || 'border-mirage-border'
+              )}>
+                {alert.severity}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

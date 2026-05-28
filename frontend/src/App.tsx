@@ -59,7 +59,6 @@ function AppWithWS() {
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="scanline" />
       <AppWithWS />
     </BrowserRouter>
   )

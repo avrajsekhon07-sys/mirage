@@ -1,200 +1,204 @@
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { AlertTriangle, Filter, CreditCard, RefreshCw } from 'lucide-react'
 import { RootState } from '../store/store'
 import { transactionsApi } from '../services/api'
 import clsx from 'clsx'
 
-const CATEGORY_CONFIG: Record<string, { label: string; color: string }> = {
-  gambling: { label: 'Gambling', color: 'text-mirage-danger bg-mirage-danger/10 border-mirage-danger/20' },
-  crypto: { label: 'Crypto', color: 'text-mirage-purple bg-mirage-purple/10 border-mirage-purple/20' },
-  retail: { label: 'Retail', color: 'text-mirage-accent bg-mirage-accent/10 border-mirage-accent/20' },
-  food: { label: 'Food', color: 'text-mirage-success bg-mirage-success/10 border-mirage-success/20' },
-  entertainment: { label: 'Entertainment', color: 'text-mirage-warning bg-mirage-warning/10 border-mirage-warning/20' },
-  transfer: { label: 'Transfer', color: 'text-orange-400 bg-orange-400/10 border-orange-400/20' },
-  investment: { label: 'Investment', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  subscription: { label: 'Subscription', color: 'text-pink-400 bg-pink-400/10 border-pink-400/20' },
-  unknown: { label: 'Unknown', color: 'text-mirage-muted bg-mirage-border border-mirage-border' },
+const CATS = ['', 'gambling', 'crypto', 'retail', 'food', 'entertainment', 'transfer', 'investment', 'subscription', 'unknown']
+
+const CAT_COLOR: Record<string, string> = {
+  gambling: 'text-mirage-danger',
+  crypto: 'text-orange-400',
+  retail: 'text-mirage-text-dim',
+  food: 'text-mirage-success',
+  entertainment: 'text-mirage-warning',
+  transfer: 'text-mirage-text-dim',
+  investment: 'text-mirage-text-dim',
+  subscription: 'text-mirage-text-dim',
+  unknown: 'text-mirage-muted',
 }
 
+function fmtDate(ts: string) {
+  try { return format(parseISO(ts), 'MMM dd') } catch { return '—' }
+}
+function fmtTime(ts: string) {
+  try { return format(parseISO(ts), 'HH:mm') } catch { return '—' }
+}
+
+const PAGE = 25
+
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<any[]>([])
+  const [txs, setTxs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<string>('')
-  const [flaggedOnly, setFlaggedOnly] = useState(false)
+  const [cat, setCat] = useState('')
+  const [flagged, setFlagged] = useState(false)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const PAGE_SIZE = 20
 
-  const recentFromWS = useSelector((s: RootState) => s.dashboard.data?.recent_transactions || [])
+  const wsRecent = useSelector((s: RootState) => s.dashboard.data?.recent_transactions || [])
 
   const load = async () => {
     setLoading(true)
     try {
-      const res = await transactionsApi.list({ page, page_size: PAGE_SIZE, flagged_only: flaggedOnly, category: filter || undefined })
-      setTransactions(res.data.items)
+      const res = await transactionsApi.list({ page, page_size: PAGE, flagged_only: flagged, category: cat || undefined })
+      setTxs(res.data.items)
       setTotal(res.data.total)
-    } catch (e) {
-      console.error(e)
-    }
+    } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [page, filter, flaggedOnly])
+  useEffect(() => { load() }, [page, cat, flagged])
 
-  // Inject live WS transactions at top
   useEffect(() => {
-    if (recentFromWS.length && page === 1) {
-      setTransactions(prev => {
+    if (wsRecent.length && page === 1) {
+      setTxs(prev => {
         const ids = new Set(prev.map((t: any) => t.id))
-        const newOnes = recentFromWS.filter((t: any) => !ids.has(t.id))
-        return [...newOnes, ...prev].slice(0, PAGE_SIZE)
+        const next = wsRecent.filter((t: any) => !ids.has(t.id))
+        return [...next, ...prev].slice(0, PAGE)
       })
     }
-  }, [recentFromWS])
+  }, [wsRecent])
 
-  const CATEGORIES = ['', 'gambling', 'crypto', 'retail', 'food', 'entertainment', 'transfer', 'investment', 'subscription', 'unknown']
+  const pages = Math.ceil(total / PAGE)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-1">
         <div>
-          <h1 className="text-2xl font-display text-mirage-text tracking-wide">
-            TRANSACTION <span className="text-mirage-accent">STREAM</span>
-          </h1>
-          <p className="text-mirage-muted text-sm font-mono mt-1">{total} total transactions</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-mirage-muted">Financial Data</p>
+          <h1 className="text-[22px] font-light text-white tracking-tight mt-0.5">Transaction Stream</h1>
         </div>
-        <button onClick={load} className="p-2 rounded-lg bg-mirage-card border border-mirage-border text-mirage-muted hover:text-mirage-accent transition-all">
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] font-mono text-mirage-muted tabular-nums">{total.toLocaleString()} RECORDS</span>
+          <button
+            onClick={load}
+            className="text-[10px] font-mono text-mirage-muted hover:text-white border border-mirage-border hover:border-mirage-border-hi px-2.5 py-1 transition-colors"
+          >
+            REFRESH
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-mirage-card border border-mirage-border">
-        <Filter className="w-4 h-4 text-mirage-muted" />
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat || 'all'}
-              onClick={() => { setFilter(cat); setPage(1) }}
-              className={clsx(
-                'px-3 py-1.5 rounded-full text-xs font-mono border transition-all',
-                filter === cat
-                  ? 'bg-mirage-accent text-mirage-bg border-mirage-accent'
-                  : 'text-mirage-muted border-mirage-border hover:border-mirage-accent/30'
-              )}
-            >
-              {cat || 'ALL'}
-            </button>
-          ))}
-        </div>
+      {/* Filter bar */}
+      <div className="panel px-4 py-3 flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-mono text-mirage-muted mr-1">CATEGORY:</span>
+        {CATS.map(c => (
+          <button
+            key={c || 'all'}
+            onClick={() => { setCat(c); setPage(1) }}
+            className={clsx(
+              'text-[10px] font-mono px-2.5 py-1 border transition-colors',
+              cat === c
+                ? 'border-mirage-accent text-mirage-accent'
+                : 'border-mirage-border text-mirage-muted hover:border-mirage-border-hi hover:text-mirage-text-dim'
+            )}
+          >
+            {c.toUpperCase() || 'ALL'}
+          </button>
+        ))}
         <button
-          onClick={() => { setFlaggedOnly(!flaggedOnly); setPage(1) }}
+          onClick={() => { setFlagged(!flagged); setPage(1) }}
           className={clsx(
-            'ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono border transition-all',
-            flaggedOnly
-              ? 'bg-mirage-danger/10 text-mirage-danger border-mirage-danger/30'
-              : 'text-mirage-muted border-mirage-border hover:border-mirage-danger/30'
+            'ml-auto text-[10px] font-mono px-2.5 py-1 border transition-colors',
+            flagged
+              ? 'border-mirage-danger text-mirage-danger'
+              : 'border-mirage-border text-mirage-muted hover:border-mirage-border-hi'
           )}
         >
-          <AlertTriangle className="w-3 h-3" />
-          FLAGGED ONLY
+          {flagged ? '▲' : '○'} FLAGGED ONLY
         </button>
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
+      <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-mirage-border">
-                {['TIME', 'MERCHANT', 'CATEGORY', 'AMOUNT', 'STATUS'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-mono text-mirage-muted uppercase tracking-wider">{h}</th>
+                {['Date', 'Time', 'Merchant', 'Category', 'Amount', 'Status'].map(h => (
+                  <th key={h} className="px-4 py-2.5 text-left text-[10px] font-mono text-mirage-muted uppercase tracking-[0.08em]">
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-mirage-border">
-              <AnimatePresence initial={false}>
-                {loading ? (
-                  <tr><td colSpan={5} className="text-center py-12"><div className="spinner mx-auto" /></td></tr>
-                ) : transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-16">
-                      <CreditCard className="w-10 h-10 text-mirage-muted opacity-30 mx-auto mb-3" />
-                      <p className="text-mirage-muted font-mono text-sm">No transactions found</p>
-                    </td>
-                  </tr>
-                ) : transactions.map((tx, i) => {
-                  const catCfg = CATEGORY_CONFIG[tx.category] || CATEGORY_CONFIG.unknown
-                  return (
-                    <motion.tr
-                      key={tx.id || i}
-                      initial={{ opacity: 0, backgroundColor: 'rgba(0,212,255,0.05)' }}
-                      animate={{ opacity: 1, backgroundColor: 'transparent' }}
-                      className={clsx('hover:bg-mirage-card/50 transition-colors', tx.is_flagged && 'bg-mirage-danger/3')}
-                    >
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-xs font-mono text-mirage-text">
-                            {tx.timestamp ? (() => { try { return format(parseISO(tx.timestamp), 'MMM d, yyyy') } catch { return '—' } })() : '—'}
-                          </p>
-                          <p className="text-[10px] font-mono text-mirage-muted">
-                            {tx.timestamp ? (() => { try { return format(parseISO(tx.timestamp), 'HH:mm:ss') } catch { return '' } })() : ''}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm text-mirage-text font-medium">{tx.merchant || '—'}</p>
-                        {tx.description && <p className="text-xs text-mirage-muted truncate max-w-48">{tx.description}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={clsx('text-[10px] font-mono px-2 py-1 rounded border uppercase tracking-wider', catCfg.color)}>
-                          {catCfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className={clsx('text-sm font-mono font-bold', tx.is_flagged ? 'text-mirage-danger' : 'text-mirage-text')}>
-                          ${Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        {tx.is_flagged ? (
-                          <div className="flex items-center gap-1.5">
-                            <AlertTriangle className="w-3.5 h-3.5 text-mirage-danger" />
-                            <span className="text-xs text-mirage-danger font-mono">FLAGGED</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-mirage-success font-mono">CLEAR</span>
-                        )}
-                      </td>
-                    </motion.tr>
-                  )
-                })}
-              </AnimatePresence>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-16 text-center">
+                    <div className="spinner mx-auto" />
+                  </td>
+                </tr>
+              ) : txs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-16 text-center text-[11px] font-mono text-mirage-muted">
+                    No transactions found
+                  </td>
+                </tr>
+              ) : txs.map((tx, i) => (
+                <tr
+                  key={tx.id || i}
+                  className={clsx(
+                    'hover:bg-white/[0.015] transition-colors',
+                    tx.is_flagged && 'bg-mirage-danger/[0.03] border-l-2 border-l-mirage-danger'
+                  )}
+                >
+                  <td className="px-4 py-2.5 text-[11px] font-mono text-mirage-muted tabular-nums">
+                    {tx.timestamp ? fmtDate(tx.timestamp) : '—'}
+                  </td>
+                  <td className="px-4 py-2.5 text-[11px] font-mono text-mirage-muted tabular-nums">
+                    {tx.timestamp ? fmtTime(tx.timestamp) : '—'}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <p className="text-[13px] text-white leading-snug">{tx.merchant || '—'}</p>
+                    {tx.description && (
+                      <p className="text-[10px] text-mirage-muted truncate max-w-[180px]">{tx.description}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className={clsx('text-[10px] font-mono uppercase tracking-wide', CAT_COLOR[tx.category] || CAT_COLOR.unknown)}>
+                      {tx.category}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className={clsx('text-[13px] font-mono font-semibold tabular-nums', tx.is_flagged ? 'text-mirage-danger' : 'text-white')}>
+                      ${Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {tx.is_flagged ? (
+                      <span className="text-[10px] font-mono text-mirage-danger border border-mirage-danger/30 px-1.5 py-px">
+                        FLAGGED
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-mirage-success">CLEAR</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
-        {total > PAGE_SIZE && (
+        {total > PAGE && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-mirage-border">
-            <p className="text-xs text-mirage-muted font-mono">
-              Page {page} of {Math.ceil(total / PAGE_SIZE)} — {total} records
-            </p>
+            <span className="text-[10px] font-mono text-mirage-muted tabular-nums">
+              PAGE {page} / {pages} — {total.toLocaleString()} RECORDS
+            </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded text-xs font-mono bg-mirage-card border border-mirage-border text-mirage-muted hover:text-mirage-accent disabled:opacity-40 transition-all"
+                className="text-[10px] font-mono px-3 py-1.5 border border-mirage-border text-mirage-muted hover:text-white hover:border-mirage-border-hi disabled:opacity-30 transition-colors"
               >
                 ← PREV
               </button>
               <button
-                onClick={() => setPage(p => p + 1)}
-                disabled={page >= Math.ceil(total / PAGE_SIZE)}
-                className="px-3 py-1.5 rounded text-xs font-mono bg-mirage-card border border-mirage-border text-mirage-muted hover:text-mirage-accent disabled:opacity-40 transition-all"
+                onClick={() => setPage(p => Math.min(pages, p + 1))}
+                disabled={page >= pages}
+                className="text-[10px] font-mono px-3 py-1.5 border border-mirage-border text-mirage-muted hover:text-white hover:border-mirage-border-hi disabled:opacity-30 transition-colors"
               >
                 NEXT →
               </button>
