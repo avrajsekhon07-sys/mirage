@@ -158,12 +158,13 @@ async def simulate_transaction(
     hour = timestamp.hour
     is_flagged, flag_reason = _flag_transaction(data.amount, hour, data.category)
 
+    cat_str = data.category.value if hasattr(data.category, 'value') else str(data.category)
     tx = Transaction(
         user_id=current_user.id,
         amount=data.amount,
         merchant=data.merchant,
         category=data.category,
-        description=data.description or f"{data.merchant or data.category.value} payment",
+        description=data.description or f"{data.merchant or cat_str} payment",
         timestamp=timestamp,
         is_flagged=is_flagged,
         flag_reason=flag_reason,
@@ -181,13 +182,14 @@ async def simulate_transaction(
 
     await manager.emit_transaction(
         {"id": tx.id, "amount": tx.amount, "merchant": tx.merchant,
-         "category": tx.category.value, "timestamp": tx.timestamp.isoformat(),
+         "category": cat_str, "timestamp": timestamp.isoformat(),
          "is_flagged": tx.is_flagged},
         current_user.id,
     )
     if new_score:
+        rl = str(new_score.risk_level.value if hasattr(new_score.risk_level, 'value') else new_score.risk_level)
         await manager.emit_risk_update(
-            {"overall_score": new_score.overall_score, "risk_level": new_score.risk_level.value},
+            {"overall_score": new_score.overall_score, "risk_level": rl},
             current_user.id,
         )
 
@@ -224,6 +226,7 @@ async def attack_simulation(
         ts = (now - timedelta(minutes=len(_ATTACK_SEQUENCE) - i)).replace(
             hour=item["hour"], minute=random.randint(0, 59)
         )
+        item_cat_str = item["category"].value if hasattr(item["category"], 'value') else str(item["category"])
         tx = Transaction(
             user_id=current_user.id,
             amount=item["amount"],
@@ -232,7 +235,7 @@ async def attack_simulation(
             description=item["desc"],
             timestamp=ts,
             is_flagged=True,
-            flag_reason=f"Attack simulation — {item['category'].value}",
+            flag_reason=f"Attack simulation — {item_cat_str}",
             hour_of_day=item["hour"],
             day_of_week=ts.weekday(),
         )
@@ -240,14 +243,14 @@ async def attack_simulation(
         await db.flush()
         await manager.emit_transaction(
             {"id": tx.id, "amount": tx.amount, "merchant": tx.merchant,
-             "category": tx.category.value, "timestamp": tx.timestamp.isoformat(),
+             "category": item_cat_str, "timestamp": ts.isoformat(),
              "is_flagged": True},
             current_user.id,
         )
         results.append({
             "merchant": tx.merchant,
             "amount": tx.amount,
-            "category": tx.category.value,
+            "category": item_cat_str,
         })
 
     await recompute_behavioral_profile(db, current_user.id)
