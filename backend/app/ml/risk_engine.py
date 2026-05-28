@@ -64,7 +64,7 @@ class RiskEngine:
     Uses pre-trained models or trains on synthetic data if not available.
     """
 
-    MODEL_PATH = "/app/models"
+    MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "models")
 
     def __init__(self):
         self.isolation_forest: Optional[IsolationForest] = None
@@ -94,7 +94,7 @@ class RiskEngine:
 
         self._train_on_synthetic_data()
 
-    def _generate_synthetic_training_data(self, n_normal=2000, n_risky=500):
+    def _generate_synthetic_training_data(self, n_normal=800, n_risky=200):
         """Generate synthetic behavioral data for initial training."""
         np.random.seed(42)
 
@@ -157,10 +157,10 @@ class RiskEngine:
 
         # Train Isolation Forest (unsupervised anomaly detection)
         self.isolation_forest = IsolationForest(
-            n_estimators=200,
+            n_estimators=100,
             contamination=0.2,
             random_state=42,
-            n_jobs=-1,
+            n_jobs=1,
         )
         self.isolation_forest.fit(X_scaled)
         logger.info("✅ Isolation Forest trained")
@@ -182,7 +182,7 @@ class RiskEngine:
         else:
             from sklearn.ensemble import GradientBoostingClassifier
             self.xgb_model = GradientBoostingClassifier(
-                n_estimators=200, max_depth=5, random_state=42
+                n_estimators=80, max_depth=4, random_state=42
             )
             self.xgb_model.fit(X_scaled, y)
             logger.info("✅ GradientBoosting classifier trained (XGBoost unavailable)")

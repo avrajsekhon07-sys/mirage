@@ -19,6 +19,17 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables ready")
     except Exception as e:
         logger.error(f"DB init error: {e}")
+
+    # Pre-warm ML engine so first request doesn't time out
+    try:
+        from app.ml.risk_engine import get_risk_engine
+        import asyncio
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, get_risk_engine)
+        logger.info("ML engine ready")
+    except Exception as e:
+        logger.error(f"ML engine init error: {e}")
+
     yield
 
 
